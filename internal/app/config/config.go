@@ -24,11 +24,20 @@ type (
 	// Config -.
 	Config struct {
 		App
+		Db
 	}
 
 	App struct {
 		IP   string `env:"HTTP_SERVER_IP" env-default:"localhost"`
 		Port string `env:"PORT" env-default:"8080"`
+	}
+
+	Db struct {
+		DbHost     string `env:"DB_HOST" env-default:"localhost"`
+		DbPort     string `env:"DB_PORT" env-default:"5432"`
+		DbUser     string `env:"DB_USER" env-default:""`
+		DbPassword string `env:"DB_PASSWORD" env-default:""`
+		Dbname     string `env:"DB_NAME" env-default:""`
 	}
 )
 
