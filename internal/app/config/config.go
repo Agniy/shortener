@@ -4,6 +4,8 @@ import (
 	"fmt"
 	"github.com/ilyakaznacheev/cleanenv"
 	"log"
+	"path/filepath"
+	"runtime"
 )
 
 var cfg *Config
@@ -45,7 +47,10 @@ type (
 func NewConfig() (*Config, error) {
 	cfg := &Config{}
 
-	err := cleanenv.ReadConfig("./.env", cfg)
+	_, b, _, _ := runtime.Caller(0)
+	basepath := filepath.Dir(b)
+
+	err := cleanenv.ReadConfig(basepath+"/.env", cfg)
 	if err != nil {
 		fmt.Printf("ReadConfig error: %s, try to get from system env variables \n", err)
 	}
