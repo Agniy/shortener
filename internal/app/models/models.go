@@ -9,8 +9,8 @@ type Links struct {
 	ID        uint64 `gorm:"primaryKey"`
 	URL       string
 	ShortURL  string
-	UrlKey    string `gorm:"index"`
-	CreatedAt time.Time
+	UrlKey    string    `gorm:"index"`
+	CreatedAt time.Time `gorm:"index"`
 }
 
 func (l *Links) TableName() string {
