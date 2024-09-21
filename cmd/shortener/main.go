@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"github.com/Agniy/shortener/internal/app/config"
 	"github.com/Agniy/shortener/internal/app/handler"
+	"github.com/Agniy/shortener/internal/app/middleware"
 	"github.com/Agniy/shortener/internal/app/models"
 	"github.com/Agniy/shortener/internal/app/storage"
 
@@ -26,7 +27,7 @@ func main() {
 	// ------------------------------------------
 
 	mux := http.NewServeMux()
-	mux.Handle(`/`, http.HandlerFunc(handler.MainPage))
+	mux.Handle(`/`, middleware.LoggingMiddleware(http.HandlerFunc(handler.MainPage)))
 
 	fmt.Println("Starting server on port:", cfg.IP+":"+cfg.Port)
 	err = http.ListenAndServe(":"+cfg.Port, mux)

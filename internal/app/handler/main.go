@@ -3,7 +3,10 @@ package handler
 import (
 	"crypto/md5"
 	"encoding/hex"
+	"fmt"
 	"github.com/Agniy/shortener/internal/app/config"
+	"github.com/Agniy/shortener/internal/app/models"
+
 	"io"
 	"net/http"
 	"strings"
@@ -29,7 +32,15 @@ func makeShortenUrl(w http.ResponseWriter, r *http.Request) {
 
 	cfg := config.GetConfig()
 	originalURL := string(body)
-	shortURL := "http://" + cfg.App.IP + ":" + cfg.Port + "/" + generateShortURL(originalURL)
+	urlKey := generateShortURL(originalURL)
+	shortURL := "http://" + cfg.App.IP + ":" + cfg.Port + "/" + urlKey
+
+	// create Link model and save it to db
+	err = models.CreateLink(originalURL, shortURL, urlKey)
+	if err != nil {
+		http.Error(w, fmt.Sprintf("Error creating link: %v", err), http.StatusInternalServerError)
+		return
+	}
 
 	w.Header().Set("Content-Type", "text/plain")
 	w.WriteHeader(http.StatusCreated)
@@ -41,12 +52,17 @@ func redirectToOriginal(w http.ResponseWriter, r *http.Request) {
 	// New GET logic
 	id := strings.TrimPrefix(r.URL.Path, "/")
 	if id != "" {
-		originalURL := getOriginalURL(id)
-		if originalURL != "" {
-			w.Header().Set("Location", originalURL)
-			w.WriteHeader(http.StatusTemporaryRedirect)
+
+		//try to get original url from db
+		link, err := models.GetLink(id)
+		if err != nil {
+			http.Error(w, fmt.Sprintf("Error getting link: %v", err), http.StatusInternalServerError)
 			return
 		}
+
+		w.Header().Set("Location", link.URL)
+		w.WriteHeader(http.StatusTemporaryRedirect)
+		return
 	} else {
 		http.NotFound(w, r)
 	}
