@@ -34,7 +34,7 @@ type (
 
 	Db struct {
 		DbHost     string `env:"DB_HOST" env-default:"localhost"`
-		DbPort     string `env:"DB_PORT" env-default:"5432"`
+		DbPort     string `env:"DB_PORT" env-default:"5433"`
 		DbUser     string `env:"DB_USER" env-default:""`
 		DbPassword string `env:"DB_PASSWORD" env-default:""`
 		Dbname     string `env:"DB_NAME" env-default:""`
