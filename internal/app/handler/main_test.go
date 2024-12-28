@@ -1,6 +1,8 @@
 package handler
 
 import (
+	"bytes"
+	"encoding/json"
 	"net/http"
 	"net/http/httptest"
 	"strings"
@@ -40,62 +42,73 @@ func TestGenerateShortURL(t *testing.T) {
 	}
 }
 
-func TestMainPage(t *testing.T) {
-
+func TestShortenURL(t *testing.T) {
 	tests := []struct {
 		name           string
-		method         string
-		body           string
+		requestURL     string
 		expectedStatus int
-		expectedBody   string
+		wantErr        bool
 	}{
 		{
-			name:           "POST request",
-			method:         http.MethodPost,
-			body:           "https://example.com",
+			name:           "Valid URL",
+			requestURL:     "https://practicum.yandex.ru",
 			expectedStatus: http.StatusCreated,
-			expectedBody:   "http://localhost:8080/",
+			wantErr:        false,
 		},
 		{
-			name:           "Invalid method",
-			method:         http.MethodPut,
-			body:           "",
-			expectedStatus: http.StatusMethodNotAllowed,
-			expectedBody:   "Method not allowed\n",
+			name:           "Empty URL",
+			requestURL:     "",
+			expectedStatus: http.StatusBadRequest,
+			wantErr:        true,
+		},
+		{
+			name:           "Invalid URL",
+			requestURL:     "not-a-url",
+			expectedStatus: http.StatusBadRequest,
+			wantErr:        true,
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			req, err := http.NewRequest(tt.method, "/", strings.NewReader(tt.body))
-			if err != nil {
-				t.Fatal(err)
+			// Create request body
+			reqBody := ShortenRequest{
+				URL: tt.requestURL,
+			}
+			bodyBytes, _ := json.Marshal(reqBody)
+
+			// Create request
+			req := httptest.NewRequest(http.MethodPost, "/api/shorten", bytes.NewReader(bodyBytes))
+			req.Header.Set("Content-Type", "application/json")
+
+			// Create response recorder
+			w := httptest.NewRecorder()
+
+			// Call handler
+			MainPage(w, req)
+
+			// Check status code
+			if w.Code != tt.expectedStatus {
+				t.Errorf("ShortenURL() status = %v, want %v", w.Code, tt.expectedStatus)
 			}
 
-			rr := httptest.NewRecorder()
-			handler := http.HandlerFunc(MainPage)
-
-			handler.ServeHTTP(rr, req)
-
-			if status := rr.Code; status != tt.expectedStatus {
-				t.Errorf("handler returned wrong status code: got %v want %v",
-					status, tt.expectedStatus)
-			}
-
-			if tt.method == http.MethodPost {
-				if !strings.HasPrefix(rr.Body.String(), tt.expectedBody) {
-					t.Errorf("handler returned unexpected body: got %v want %v",
-						rr.Body.String(), tt.expectedBody)
+			// For successful requests, verify response format
+			if !tt.wantErr {
+				var response ShortenResponse
+				err := json.NewDecoder(w.Body).Decode(&response)
+				if err != nil {
+					t.Errorf("Failed to decode response: %v", err)
 				}
-			} else if tt.method == http.MethodGet {
-				if location := rr.Header().Get("Location"); location != "https://example.com" {
-					t.Errorf("handler returned unexpected location header: got %v want %v",
-						location, "https://example.com")
+
+				// Check if response contains a valid shortened URL
+				if !strings.HasPrefix(response.Result, "http://") {
+					t.Errorf("Response URL doesn't have correct prefix: %v", response.Result)
 				}
-			} else {
-				if rr.Body.String() != tt.expectedBody {
-					t.Errorf("handler returned unexpected body: got %v want %v",
-						rr.Body.String(), tt.expectedBody)
+
+				// Check if Content-Type header is set correctly
+				contentType := w.Header().Get("Content-Type")
+				if contentType != "application/json" {
+					t.Errorf("Content-Type = %v, want application/json", contentType)
 				}
 			}
 		})

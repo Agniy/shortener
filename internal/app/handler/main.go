@@ -3,14 +3,21 @@ package handler
 import (
 	"crypto/md5"
 	"encoding/hex"
+	"encoding/json"
 	"fmt"
-	"github.com/Agniy/shortener/internal/app/config"
 	"github.com/Agniy/shortener/internal/app/models"
 
-	"io"
 	"net/http"
 	"strings"
 )
+
+type ShortenRequest struct {
+	URL string `json:"url"`
+}
+
+type ShortenResponse struct {
+	Result string `json:"result"`
+}
 
 func MainPage(w http.ResponseWriter, r *http.Request) {
 	if r.Method == http.MethodPost {
@@ -24,27 +31,34 @@ func MainPage(w http.ResponseWriter, r *http.Request) {
 
 // handle post request to get short url
 func makeShortenUrl(w http.ResponseWriter, r *http.Request) {
-	body, err := io.ReadAll(r.Body)
-	if err != nil {
-		http.Error(w, "Error reading request body", http.StatusInternalServerError)
+	var req ShortenRequest
+
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		http.Error(w, "Invalid request body", http.StatusBadRequest)
 		return
 	}
 
-	cfg := config.GetConfig()
-	originalURL := string(body)
-	urlKey := generateShortURL(originalURL)
-	shortURL := "http://" + cfg.App.IP + ":" + cfg.Port + "/" + urlKey
-
-	// create Link model and save it to db
-	err = models.CreateLink(originalURL, shortURL, urlKey)
-	if err != nil {
-		http.Error(w, fmt.Sprintf("Error creating link: %v", err), http.StatusInternalServerError)
+	if req.URL == "" {
+		http.Error(w, "URL is required", http.StatusBadRequest)
 		return
 	}
 
-	w.Header().Set("Content-Type", "text/plain")
+	// check if url is valid
+	if !strings.HasPrefix(req.URL, "http://") && !strings.HasPrefix(req.URL, "https://") {
+		http.Error(w, "Invalid URL", http.StatusBadRequest)
+		return
+	}
+
+	shortURL := generateShortURL(req.URL)
+	baseURL := "http://" + r.Host
+
+	response := ShortenResponse{
+		Result: baseURL + "/" + shortURL,
+	}
+
+	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusCreated)
-	w.Write([]byte(shortURL))
+	json.NewEncoder(w).Encode(response)
 }
 
 // redirect to original url
