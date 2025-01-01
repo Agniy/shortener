@@ -50,7 +50,7 @@ func makeShortenUrl(w http.ResponseWriter, r *http.Request) {
 	}
 
 	shortURL := generateShortURL(req.URL)
-	baseURL := "http://" + r.Host
+	baseURL := "http://" + r.Host + "/api/shorten"
 
 	response := ShortenResponse{
 		Result: baseURL + "/" + shortURL,
@@ -64,7 +64,7 @@ func makeShortenUrl(w http.ResponseWriter, r *http.Request) {
 // redirect to original url
 func redirectToOriginal(w http.ResponseWriter, r *http.Request) {
 	// New GET logic
-	id := strings.TrimPrefix(r.URL.Path, "/")
+	id := strings.TrimPrefix(r.URL.Path, "/api/shorten/")
 	if id != "" {
 
 		//try to get original url from db

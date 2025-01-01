@@ -27,10 +27,10 @@ func main() {
 	// ------------------------------------------
 
 	mux := http.NewServeMux()
-	mux.Handle(`/api/shorten`, middleware.LoggingMiddleware(http.HandlerFunc(handler.MainPage)))
+	mux.Handle(`/api/shorten/`, middleware.LoggingMiddleware(http.HandlerFunc(handler.MainPage)))
 
 	fmt.Println("Starting server on port:", cfg.IP+":"+cfg.Port)
-	err = http.ListenAndServe(":"+cfg.Port, mux)
+	err = http.ListenAndServe(":"+cfg.Port, middleware.GzipHandle(mux))
 	if err != nil {
 		panic(err)
 	}
